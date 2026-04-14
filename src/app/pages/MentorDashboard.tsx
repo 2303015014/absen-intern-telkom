@@ -58,11 +58,25 @@ export default function MentorDashboard() {
         api.getMaterials(),
         api.getQuizQuestions(),
       ]);
-      setInterns(internsData.interns || []);
+      
+      // --- PENYARING NAMA GANDA (DEDUPLIKASI) ---
+      const rawInterns = internsData.interns || [];
+      const uniqueInternsMap = new Map();
+      rawInterns.forEach((intern: any) => {
+        if (intern && intern.name) {
+          // Gunakan nama huruf kecil sebagai kunci agar tidak ada duplikat
+          uniqueInternsMap.set(intern.name.toLowerCase().trim(), intern);
+        }
+      });
+      const uniqueInterns = Array.from(uniqueInternsMap.values());
+      // ------------------------------------------
+
+      setInterns(uniqueInterns);
       setMaterials(matsData.materials || []);
       setQuizQuestions(quizData.questions || []);
-      if (internsData.interns?.length > 0 && !selectedIntern) {
-        selectIntern(internsData.interns[0]);
+      
+      if (uniqueInterns.length > 0 && !selectedIntern) {
+        selectIntern(uniqueInterns[0]);
       }
     } catch (err) {
       console.error('Load data error:', err);
@@ -450,7 +464,7 @@ export default function MentorDashboard() {
                                       )}
                                     </div>
 
-                                    {/* Photos - Diubah ke object-contain & h-48 agar tidak terpotong */}
+                                    {/* Photos */}
                                     <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
                                       {att.photoIn && (
                                         <div className="flex-1 min-w-[140px]">
@@ -472,19 +486,19 @@ export default function MentorDashboard() {
                                       )}
                                     </div>
 
-                                    {/* Activities/Reports */}
+                                    {/* Activities/Reports dengan class whitespace-pre-wrap agar enter dan spasi terjaga */}
                                     {(att.report || att.midDayActivity) && (
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                         {att.midDayActivity && (
-                                          <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-sm text-gray-600">
-                                            <p className="text-[10px] text-blue-500 mb-1" style={{ fontWeight: 600 }}>Kegiatan Siang (Mid-Day):</p>
-                                            {att.midDayActivity}
+                                          <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 text-sm text-gray-700">
+                                            <p className="text-[10px] text-blue-500 mb-2 uppercase" style={{ fontWeight: 700 }}>Kegiatan Siang (Mid-Day):</p>
+                                            <div className="whitespace-pre-wrap leading-relaxed">{att.midDayActivity}</div>
                                           </div>
                                         )}
                                         {att.report && (
-                                          <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-600">
-                                            <p className="text-[10px] text-gray-400 mb-1" style={{ fontWeight: 600 }}>Laporan Akhir Hari (Out):</p>
-                                            {att.report}
+                                          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-700">
+                                            <p className="text-[10px] text-gray-400 mb-2 uppercase" style={{ fontWeight: 700 }}>Laporan Akhir Hari (Out):</p>
+                                            <div className="whitespace-pre-wrap leading-relaxed">{att.report}</div>
                                           </div>
                                         )}
                                       </div>
