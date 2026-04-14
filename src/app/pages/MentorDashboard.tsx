@@ -89,7 +89,6 @@ export default function MentorDashboard() {
   };
 
   const handleApprove = async (att: any) => {
-    // Tambahkan penjaga ini agar TypeScript tahu datanya aman
     if (!selectedIntern || !selectedIntern.name) return;
 
     try {
@@ -99,7 +98,6 @@ export default function MentorDashboard() {
       att.approvedBy = mentorName;
       setInternAttendance([...internAttendance]);
       
-      // Cara update state yang benar
       if (selectedIntern.todayAttendance?.date === att.date) {
         setSelectedIntern({
           ...selectedIntern,
@@ -407,7 +405,7 @@ export default function MentorDashboard() {
                               ) : (
                                 internAttendance.sort((a: any, b: any) => b.date.localeCompare(a.date)).map((att: any, idx: number) => (
                                   <div key={idx} className="rounded-[24px] p-5 bg-white/70 border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-                                    <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center justify-between mb-4">
                                       <p className="text-gray-900 text-sm" style={{ fontWeight: 700 }}>
                                         {new Date(att.date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                                       </p>
@@ -416,54 +414,89 @@ export default function MentorDashboard() {
                                       </span>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Clock className="w-4 h-4 text-blue-500" />
-                                        <span className="text-gray-600">In: <span style={{ fontWeight: 600 }}>{att.clockIn}</span></span>
+                                    {/* 3 KOLOM ABSENSI: IN, MID, OUT */}
+                                    <div className="grid grid-cols-3 gap-2 mb-4">
+                                      <div className="bg-gray-50 p-3 rounded-2xl text-center border border-gray-100">
+                                        <p className="text-[9px] text-gray-400 uppercase mb-1" style={{ fontWeight: 600 }}>Pagi (In)</p>
+                                        <p className="text-xs text-gray-900" style={{ fontWeight: 700 }}>{att.clockIn || '--:--'}</p>
                                       </div>
-                                      {att.clockOut && (
-                                        <div className="flex items-center gap-2 text-sm">
-                                          <Clock className="w-4 h-4 text-orange-500" />
-                                          <span className="text-gray-600">Out: <span style={{ fontWeight: 600 }}>{att.clockOut}</span></span>
+                                      
+                                      <div className={`p-3 rounded-2xl text-center border ${att.midDayCheckIn ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'}`}>
+                                        <p className={`text-[9px] uppercase mb-1 ${att.midDayCheckIn ? 'text-blue-500' : 'text-gray-400'}`} style={{ fontWeight: 600 }}>Siang (Mid)</p>
+                                        <p className={`text-xs ${att.midDayCheckIn ? 'text-blue-700' : 'text-gray-400'}`} style={{ fontWeight: 700 }}>
+                                          {att.midDayCheckIn || '--:--'}
+                                        </p>
+                                      </div>
+
+                                      <div className="bg-gray-50 p-3 rounded-2xl text-center border border-gray-100">
+                                        <p className="text-[9px] text-gray-400 uppercase mb-1" style={{ fontWeight: 600 }}>Sore (Out)</p>
+                                        <p className="text-xs text-gray-900" style={{ fontWeight: 700 }}>{att.clockOut || '--:--'}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Detail Lokasi */}
+                                    <div className="space-y-2 mb-4">
+                                      {att.locationIn?.address && (
+                                        <div className="flex items-start gap-2 text-xs text-gray-500">
+                                          <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-gray-400" />
+                                          <span><span className="font-semibold text-gray-700">In:</span> {att.locationIn.address}</span>
+                                        </div>
+                                      )}
+                                      {att.locationMidDay?.address && (
+                                        <div className="flex items-start gap-2 text-xs text-gray-500">
+                                          <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-blue-500" />
+                                          <span><span className="font-semibold text-gray-700">Mid:</span> {att.locationMidDay.address}</span>
                                         </div>
                                       )}
                                     </div>
 
-                                    {att.locationIn?.address && (
-                                      <div className="flex items-start gap-2 text-xs text-gray-500 mb-3">
-                                        <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-green-500" />
-                                        <span>{att.locationIn.address}</span>
-                                      </div>
-                                    )}
-
-                                    {/* Photos */}
-                                    <div className="flex gap-2 mb-3">
+                                    {/* Photos - Diubah ke object-contain & h-48 agar tidak terpotong */}
+                                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
                                       {att.photoIn && (
-                                        <div className="flex-1">
-                                          <p className="text-[10px] text-gray-400 mb-1">Foto Clock In</p>
+                                        <div className="flex-1 min-w-[140px]">
+                                          <p className="text-[10px] text-gray-400 mb-1" style={{ fontWeight: 600 }}>Foto Pagi</p>
                                           <img src={att.photoIn} alt="Clock In" className="w-full h-48 object-contain rounded-xl bg-gray-100" />
                                         </div>
                                       )}
+                                      {att.photoMidDay && (
+                                        <div className="flex-1 min-w-[140px]">
+                                          <p className="text-[10px] text-blue-400 mb-1" style={{ fontWeight: 600 }}>Foto Siang</p>
+                                          <img src={att.photoMidDay} alt="Mid Day" className="w-full h-48 object-contain rounded-xl bg-gray-100" />
+                                        </div>
+                                      )}
                                       {att.photoOut && (
-                                        <div className="flex-1">
-                                          <p className="text-[10px] text-gray-400 mb-1">Foto Clock Out</p>
+                                        <div className="flex-1 min-w-[140px]">
+                                          <p className="text-[10px] text-gray-400 mb-1" style={{ fontWeight: 600 }}>Foto Sore</p>
                                           <img src={att.photoOut} alt="Clock Out" className="w-full h-48 object-contain rounded-xl bg-gray-100" />
                                         </div>
                                       )}
                                     </div>
 
-                                    {att.report && (
-                                      <div className="p-3 rounded-xl bg-gray-50 text-sm text-gray-600 mb-3">
-                                        <p className="text-[10px] text-gray-400 mb-1" style={{ fontWeight: 600 }}>Laporan:</p>
-                                        {att.report}
+                                    {/* Activities/Reports */}
+                                    {(att.report || att.midDayActivity) && (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                        {att.midDayActivity && (
+                                          <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-sm text-gray-600">
+                                            <p className="text-[10px] text-blue-500 mb-1" style={{ fontWeight: 600 }}>Kegiatan Siang (Mid-Day):</p>
+                                            {att.midDayActivity}
+                                          </div>
+                                        )}
+                                        {att.report && (
+                                          <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-600">
+                                            <p className="text-[10px] text-gray-400 mb-1" style={{ fontWeight: 600 }}>Laporan Akhir Hari (Out):</p>
+                                            {att.report}
+                                          </div>
+                                        )}
                                       </div>
                                     )}
 
-                                    {att.status === 'pending' && (
+                                    {/* Tombol Approve */}
+                                    {(att.status === 'pending' || (att.midDayCheckIn && att.status !== 'approved')) && (
                                       <button onClick={() => handleApprove(att)}
-                                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md"
+                                        className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md"
                                         style={{ fontWeight: 600 }}>
-                                        <CheckCircle className="w-4 h-4" /> Approve Kehadiran
+                                        <CheckCircle className="w-4 h-4" /> 
+                                        {att.status === 'pending' ? 'Approve Kehadiran' : 'Approve Mid-Day'}
                                       </button>
                                     )}
                                   </div>

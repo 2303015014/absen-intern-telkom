@@ -159,6 +159,58 @@ app.post(`${BASE}/attendance/clockout`, async (c) => {
   }
 });
 
+// ── Mid-Day Check In ──
+app.post(`${BASE}/attendance/midday`, async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const name = formData.get("name") as string;
+    const lat = formData.get("lat") as string;
+    const lng = formData.get("lng") as string;
+    const address = formData.get("address") as string;
+    const activity = formData.get("activity") as string;
+    const photo = formData.get("photo") as File | null;
+
+    if (!name) return c.json({ error: "Nama wajib diisi" }, 400);
+    if (!activity) return c.json({ error: "Kegiatan wajib diisi" }, 400);
+
+    const today = new Date().toISOString().split("T")[0];
+    const timeNow = new Date().toLocaleTimeString("id-ID", {
+      hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Jakarta",
+    });
+    const attKey = `attendance:${name.toLowerCase().trim()}:${today}`;
+    const existing = await kv.get(attKey);
+
+    if (!existing || !existing.clockIn) return c.json({ error: "Belum clock in hari ini" }, 400);
+    if (existing.midDayCheckIn) return c.json({ error: "Mid-day check in sudah dilakukan hari ini" }, 400);
+
+    let photoUrl = null;
+    if (photo && photo.size > 0) {
+      const sb = supabaseAdmin();
+      const filePath = `attendance/${name.toLowerCase().trim()}/${today}_midday_${Date.now()}.jpg`;
+      const { error: uploadError } = await sb.storage.from(BUCKET_NAME).upload(filePath, photo, {
+        contentType: "image/jpeg", upsert: true,
+      });
+      if (!uploadError) {
+        const { data: signedData } = await sb.storage.from(BUCKET_NAME).createSignedUrl(filePath, 86400 * 30);
+        photoUrl = signedData?.signedUrl;
+      }
+    }
+
+    const record = {
+      ...existing,
+      midDayCheckIn: timeNow,
+      locationMidDay: { lat, lng, address: address || "Unknown" },
+      photoMidDay: photoUrl,
+      midDayActivity: activity,
+    };
+    await kv.set(attKey, record);
+    return c.json({ success: true, attendance: record });
+  } catch (e) {
+    console.log("Mid-day check in error:", e);
+    return c.json({ error: `Mid-day check in error: ${e}` }, 500);
+  }
+});
+
 app.get(`${BASE}/attendance/:name`, async (c) => {
   try {
     const name = c.req.param("name").toLowerCase().trim();

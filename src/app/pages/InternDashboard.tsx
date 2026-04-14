@@ -13,11 +13,15 @@ interface AttendanceRecord {
   date: string;
   clockIn?: string;
   clockOut?: string;
+  midDayCheckIn?: string;
   locationIn?: { lat: number; lng: number; address: string };
   locationOut?: { lat: number; lng: number; address: string };
+  locationMidDay?: { lat: number; lng: number; address: string };
   photoIn?: string;
   photoOut?: string;
+  photoMidDay?: string;
   report?: string;
+  midDayActivity?: string;
   status: string;
 }
 
@@ -25,6 +29,8 @@ export default function InternDashboard() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const midDayVideoRef = useRef<HTMLVideoElement>(null);
+  const midDayCanvasRef = useRef<HTMLCanvasElement>(null);
   const [internName] = useState(() => localStorage.getItem('internName') || '');
   const [userData, setUserData] = useState<any>(null);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
@@ -45,7 +51,16 @@ export default function InternDashboard() {
   const [cameraError, setCameraError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [materials, setMaterials] = useState<any[]>([]);
-  const [loadingMaterials, setLoadingMaterials] = useState(false);
+
+  // ── Mid-Day Check In (state mandiri, tidak terhubung Clock In/Out) ──
+  const [midDayActivity, setMidDayActivity] = useState('');
+  const [showMidDayCamera, setShowMidDayCamera] = useState(false);
+  const [midDayCameraStream, setMidDayCameraStream] = useState<MediaStream | null>(null);
+  const [midDayCapturedBlob, setMidDayCapturedBlob] = useState<Blob | null>(null);
+  const [midDayCapturedPreview, setMidDayCapturedPreview] = useState<string | null>(null);
+  const [midDayCameraUnavailable, setMidDayCameraUnavailable] = useState(false);
+  const [midDayCameraError, setMidDayCameraError] = useState('');
+  
   const [logbookMonth, setLogbookMonth] = useState(new Date().getMonth());
   const [logbookYear, setLogbookYear] = useState(new Date().getFullYear());
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -78,21 +93,17 @@ export default function InternDashboard() {
     const load = async () => {
       setLoadingData(true);
       try {
-        // Get location
         const loc = await api.getAccurateLocation();
         setCurrentLocation(loc);
 
-        // Get attendance history
         const attData = await api.getAttendance(internName);
         const records = attData.attendance || [];
         setAttendanceHistory(records);
 
-        // Check today
         const today = new Date().toISOString().split('T')[0];
         const todayRec = records.find((r: AttendanceRecord) => r.date === today);
         if (todayRec) setTodayAttendance(todayRec);
 
-        // Load materials
         const matsData = await api.getMaterials();
         setMaterials(matsData.materials || []);
       } catch (err) {
@@ -106,6 +117,7 @@ export default function InternDashboard() {
 
   const isClockedIn = todayAttendance?.clockIn && !todayAttendance?.clockOut;
   const isFullyDone = todayAttendance?.clockIn && todayAttendance?.clockOut;
+  const hasMidDayCheckIn = !!todayAttendance?.midDayCheckIn;
 
   // Calendar data
   const year = now.getFullYear();
@@ -142,46 +154,13 @@ export default function InternDashboard() {
       setCameraUnavailable(true);
       setShowCamera(true);
       if (err.name === 'NotAllowedError') {
-        setCameraError('Akses kamera ditolak. Izinkan akses kamera di pengaturan browser Anda, lalu coba lagi.');
+        setCameraError('Akses kamera ditolak. Izinkan akses kamera di pengaturan browser Anda.');
       } else if (err.name === 'NotFoundError') {
         setCameraError('Kamera tidak ditemukan. Pastikan perangkat Anda memiliki kamera.');
       } else {
-        setCameraError('Kamera tidak tersedia. Buka aplikasi ini langsung di browser (bukan dalam iframe) untuk mengaktifkan kamera.');
+        setCameraError('Kamera tidak tersedia. Buka aplikasi ini langsung di browser (bukan dalam iframe).');
       }
     }
-  }, []);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // Compress image
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        // Resize to max 640px
-        const maxW = 640;
-        const scale = Math.min(1, maxW / img.width);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob((blob) => {
-            if (blob) {
-              setCapturedBlob(blob);
-              setCapturedPreview(URL.createObjectURL(blob));
-            }
-          }, 'image/jpeg', 0.5);
-        }
-      };
-      img.src = ev.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-    // Reset input so same file can be selected again
-    e.target.value = '';
   }, []);
 
   const stopCamera = useCallback(() => {
@@ -201,7 +180,6 @@ export default function InternDashboard() {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0);
-        // Add timestamp + location overlay
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
         ctx.fillStyle = '#fff';
@@ -211,7 +189,6 @@ export default function InternDashboard() {
         if (currentLocation) {
           ctx.fillText(`📍 ${currentLocation.address.substring(0, 50)}`, 10, canvas.height - 28);
         }
-        // Compress to ~200KB
         canvas.toBlob((blob) => {
           if (blob) {
             setCapturedBlob(blob);
@@ -275,7 +252,102 @@ export default function InternDashboard() {
     }
   };
 
-  // Find selected day's attendance
+  // ── Mid-Day Camera Functions ────────────────────────────────────────
+  const startMidDayCamera = useCallback(async () => {
+    setMidDayCapturedBlob(null);
+    setMidDayCapturedPreview(null);
+    setMidDayCameraError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+      setMidDayCameraStream(stream);
+      setMidDayCameraUnavailable(false);
+      setShowMidDayCamera(true);
+      setTimeout(() => {
+        if (midDayVideoRef.current) {
+          midDayVideoRef.current.srcObject = stream;
+          midDayVideoRef.current.play().catch(() => {});
+        }
+      }, 200);
+    } catch (err: any) {
+      setMidDayCameraUnavailable(true);
+      setShowMidDayCamera(true);
+      if (err.name === 'NotAllowedError') {
+        setMidDayCameraError('Akses kamera ditolak. Izinkan akses kamera di pengaturan browser Anda.');
+      } else if (err.name === 'NotFoundError') {
+        setMidDayCameraError('Kamera tidak ditemukan. Pastikan perangkat Anda memiliki kamera.');
+      } else {
+        setMidDayCameraError('Kamera tidak tersedia. Buka aplikasi di browser langsung (bukan dalam iframe).');
+      }
+    }
+  }, []);
+
+  const stopMidDayCamera = useCallback(() => {
+    if (midDayCameraStream) {
+      midDayCameraStream.getTracks().forEach(t => t.stop());
+      setMidDayCameraStream(null);
+    }
+    setShowMidDayCamera(false);
+  }, [midDayCameraStream]);
+
+  const captureMidDayPhoto = useCallback(() => {
+    if (midDayVideoRef.current && midDayCanvasRef.current && midDayVideoRef.current.videoWidth > 0) {
+      const canvas = midDayCanvasRef.current;
+      const video = midDayVideoRef.current;
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px system-ui';
+        const ts = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+        ctx.fillText(ts, 10, canvas.height - 15);
+        if (currentLocation) {
+          ctx.fillText(`📍 ${currentLocation.address.substring(0, 50)}`, 10, canvas.height - 28);
+        }
+        canvas.toBlob((blob) => {
+          if (blob) {
+            setMidDayCapturedBlob(blob);
+            setMidDayCapturedPreview(URL.createObjectURL(blob));
+          }
+        }, 'image/jpeg', 0.5);
+      }
+    }
+    stopMidDayCamera();
+  }, [stopMidDayCamera, currentLocation]);
+
+  const handleMidDayCheckIn = async () => {
+    if (!midDayActivity.trim()) { alert('Harap isi kegiatan yang sedang dilakukan!'); return; }
+    if (!midDayCapturedBlob) { alert('Harap ambil foto terlebih dahulu!'); return; }
+    if (!currentLocation) {
+      const loc = await api.getAccurateLocation();
+      setCurrentLocation(loc);
+    }
+    setLoading(true);
+    try {
+      const loc = currentLocation || { lat: 0, lng: 0, address: 'Unknown' };
+      const result = await api.midDayCheckIn(
+        internName, String(loc.lat), String(loc.lng), loc.address, midDayActivity, midDayCapturedBlob
+      );
+      if (result.error) { alert(result.error); setLoading(false); return; }
+      setTodayAttendance(result.attendance);
+      setMidDayCapturedBlob(null);
+      setMidDayCapturedPreview(null);
+      setMidDayActivity('');
+      setSuccessMsg('Mid-Day Check In berhasil! Kegiatan tersimpan.');
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 4000);
+    } catch (err: any) {
+      alert('Mid-Day Check In gagal: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
   const selectedAttendance = attendanceHistory.find(a => a.date === selectedDate);
 
@@ -293,6 +365,7 @@ export default function InternDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={midDayCanvasRef} className="hidden" />
 
       {/* Success Toast */}
       <AnimatePresence>
@@ -570,6 +643,160 @@ export default function InternDashboard() {
             <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
             <p className="text-green-800 text-sm" style={{ fontWeight: 600 }}>Absensi hari ini sudah selesai!</p>
             <p className="text-green-600 text-xs mt-1">Clock In: {todayAttendance?.clockIn} — Clock Out: {todayAttendance?.clockOut}</p>
+            {todayAttendance?.midDayCheckIn && (
+              <p className="text-blue-500 text-xs mt-0.5">Mid-Day Check In: {todayAttendance.midDayCheckIn}</p>
+            )}
+          </motion.div>
+        )}
+
+        {/* ── Mid-Day Check In (Menu Terpisah & Selalu Aktif) ── */}
+        {isClockedIn && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+            className="rounded-[24px] overflow-hidden bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
+
+            {/* Header kartu */}
+            <div className="px-5 pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                  hasMidDayCheckIn ? 'bg-blue-500' : 'bg-blue-100'
+                }`}>
+                  <Clock className={`w-5 h-5 ${hasMidDayCheckIn ? 'text-white' : 'text-blue-500'}`} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-gray-900 text-sm" style={{ fontWeight: 700 }}>Mid-Day Check In</h3>
+                  <p className="text-gray-400 text-[11px]">Foto + lokasi + kegiatan</p>
+                </div>
+                {hasMidDayCheckIn ? (
+                  <span className="px-2.5 py-1 rounded-full bg-blue-500 text-white text-[10px]" style={{ fontWeight: 600 }}>
+                    ✓ {todayAttendance?.midDayCheckIn}
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-600 text-[10px]" style={{ fontWeight: 600 }}>
+                    Tersedia
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Konten kartu */}
+            {hasMidDayCheckIn ? (
+              /* ── Sudah check in: tampilkan ringkasan ── */
+              <div className="px-5 pb-5 space-y-2.5">
+                <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 space-y-2">
+                  {todayAttendance?.photoMidDay && (
+                    <img src={todayAttendance.photoMidDay} alt="Mid-Day" className="w-full rounded-xl object-cover mb-2" style={{ maxHeight: 140 }} />
+                  )}
+                  <div className="flex items-start gap-2 text-xs">
+                    <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                    <span className="text-gray-700">{todayAttendance?.midDayActivity || '-'}</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs">
+                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                    <span className="text-gray-500">{todayAttendance?.locationMidDay?.address || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ── Form selalu aktif ── */
+              <div className="px-5 pb-5 space-y-3">
+                {/* Kamera / Preview — independent */}
+                <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ aspectRatio: '4/3' }}>
+                  {showMidDayCamera && midDayCameraUnavailable ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-6">
+                      <div className="text-center">
+                        <XCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+                        <p className="text-white text-sm mb-2" style={{ fontWeight: 600 }}>Kamera Tidak Tersedia</p>
+                        <p className="text-white/60 text-xs leading-relaxed mb-4">{midDayCameraError}</p>
+                        <div className="flex gap-2">
+                          <button onClick={stopMidDayCamera}
+                            className="flex-1 px-3 py-2 rounded-xl bg-white/10 text-white text-xs" style={{ fontWeight: 600 }}>
+                            Tutup
+                          </button>
+                          <button onClick={() => { stopMidDayCamera(); startMidDayCamera(); }}
+                            className="flex-1 px-3 py-2 rounded-xl bg-blue-500 text-white text-xs" style={{ fontWeight: 600 }}>
+                            Coba Lagi
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : showMidDayCamera ? (
+                    <div className="absolute inset-0">
+                      <video ref={midDayVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-end justify-center pb-6">
+                        <button onClick={captureMidDayPhoto}
+                          className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+                          <div className="w-14 h-14 rounded-full border-4 border-blue-500" />
+                        </button>
+                      </div>
+                      <button onClick={stopMidDayCamera}
+                        className="absolute top-3 right-3 p-2 rounded-xl bg-black/40 text-white">
+                        <XCircle className="w-5 h-5" />
+                      </button>
+                      {currentLocation && (
+                        <div className="absolute bottom-2 left-2 right-16 px-3 py-1.5 rounded-lg bg-black/50 text-white text-[10px] flex items-center gap-1">
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{currentLocation.address}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : midDayCapturedPreview ? (
+                    <div className="absolute inset-0">
+                      <img src={midDayCapturedPreview} alt="Mid-Day" className="w-full h-full object-cover" />
+                      <div className="absolute top-3 right-3 px-3 py-1 rounded-xl bg-blue-500/90 text-white text-xs" style={{ fontWeight: 600 }}>
+                        Foto siap
+                      </div>
+                      <button onClick={() => { setMidDayCapturedBlob(null); setMidDayCapturedPreview(null); }}
+                        className="absolute top-3 left-3 px-3 py-1 rounded-xl bg-black/40 text-white text-xs">
+                        Ulang
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                      <div className="text-center">
+                        <Camera className="w-10 h-10 text-white/20 mx-auto mb-2" />
+                        <p className="text-white/40 text-xs">Foto selfie untuk mid-day check in</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lokasi real-time */}
+                <div className="flex items-start gap-2 text-xs text-gray-500 px-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#800000] shrink-0 mt-0.5" />
+                  <span>{currentLocation?.address || 'Mendeteksi lokasi...'}</span>
+                </div>
+
+                {/* Input kegiatan */}
+                <textarea
+                  value={midDayActivity}
+                  onChange={(e) => setMidDayActivity(e.target.value)}
+                  placeholder="Tuliskan kegiatan yang sedang Anda kerjakan saat ini..."
+                  className="w-full h-24 px-4 py-3 rounded-2xl bg-white/80 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/30 resize-none text-sm"
+                />
+
+                {/* Tombol aksi */}
+                {!showMidDayCamera && !midDayCapturedPreview && (
+                  <button onClick={startMidDayCamera}
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white transition-all flex items-center justify-center gap-2"
+                    style={{ fontWeight: 600 }}>
+                    <Camera className="w-5 h-5" /> Buka Kamera
+                  </button>
+                )}
+
+                {midDayCapturedPreview && midDayActivity.trim() && (
+                  <button onClick={handleMidDayCheckIn} disabled={loading}
+                    className={`w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700 text-white transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-60' : ''}`}
+                    style={{ fontWeight: 600 }}>
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                    {loading ? 'Memproses...' : 'Konfirmasi Mid-Day Check In'}
+                  </button>
+                )}
+
+                {midDayCapturedPreview && !midDayActivity.trim() && (
+                  <p className="text-center text-xs text-orange-500">Harap isi kegiatan terlebih dahulu ↑</p>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
 
