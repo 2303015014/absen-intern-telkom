@@ -650,155 +650,153 @@ export default function InternDashboard() {
         )}
 
         {/* ── Mid-Day Check In (Menu Terpisah & Selalu Aktif) ── */}
-        {isClockedIn && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
-            className="rounded-[24px] overflow-hidden bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+          className="rounded-[24px] overflow-hidden bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
 
-            {/* Header kartu */}
-            <div className="px-5 pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                  hasMidDayCheckIn ? 'bg-blue-500' : 'bg-blue-100'
-                }`}>
-                  <Clock className={`w-5 h-5 ${hasMidDayCheckIn ? 'text-white' : 'text-blue-500'}`} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-gray-900 text-sm" style={{ fontWeight: 700 }}>Mid-Day Check In</h3>
-                  <p className="text-gray-400 text-[11px]">Foto + lokasi + kegiatan</p>
-                </div>
-                {hasMidDayCheckIn ? (
-                  <span className="px-2.5 py-1 rounded-full bg-blue-500 text-white text-[10px]" style={{ fontWeight: 600 }}>
-                    ✓ {todayAttendance?.midDayCheckIn}
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-600 text-[10px]" style={{ fontWeight: 600 }}>
-                    Tersedia
-                  </span>
+          {/* Header kartu */}
+          <div className="px-5 pt-5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                hasMidDayCheckIn ? 'bg-blue-500' : 'bg-blue-100'
+              }`}>
+                <Clock className={`w-5 h-5 ${hasMidDayCheckIn ? 'text-white' : 'text-blue-500'}`} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-gray-900 text-sm" style={{ fontWeight: 700 }}>Mid-Day Check In</h3>
+                <p className="text-gray-400 text-[11px]">Foto + lokasi + kegiatan</p>
+              </div>
+              {hasMidDayCheckIn ? (
+                <span className="px-2.5 py-1 rounded-full bg-blue-500 text-white text-[10px]" style={{ fontWeight: 600 }}>
+                  ✓ {todayAttendance?.midDayCheckIn}
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-600 text-[10px]" style={{ fontWeight: 600 }}>
+                  Tersedia
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Konten kartu */}
+          {hasMidDayCheckIn ? (
+            /* ── Sudah check in: tampilkan ringkasan ── */
+            <div className="px-5 pb-5 space-y-2.5">
+              <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 space-y-2">
+                {todayAttendance?.photoMidDay && (
+                  <img src={todayAttendance.photoMidDay} alt="Mid-Day" className="w-full rounded-xl object-cover mb-2" style={{ maxHeight: 140 }} />
                 )}
+                <div className="flex items-start gap-2 text-xs">
+                  <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                  <span className="text-gray-700">{todayAttendance?.midDayActivity || '-'}</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs">
+                  <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                  <span className="text-gray-500">{todayAttendance?.locationMidDay?.address || '-'}</span>
+                </div>
               </div>
             </div>
-
-            {/* Konten kartu */}
-            {hasMidDayCheckIn ? (
-              /* ── Sudah check in: tampilkan ringkasan ── */
-              <div className="px-5 pb-5 space-y-2.5">
-                <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 space-y-2">
-                  {todayAttendance?.photoMidDay && (
-                    <img src={todayAttendance.photoMidDay} alt="Mid-Day" className="w-full rounded-xl object-cover mb-2" style={{ maxHeight: 140 }} />
-                  )}
-                  <div className="flex items-start gap-2 text-xs">
-                    <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
-                    <span className="text-gray-700">{todayAttendance?.midDayActivity || '-'}</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs">
-                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
-                    <span className="text-gray-500">{todayAttendance?.locationMidDay?.address || '-'}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* ── Form selalu aktif ── */
-              <div className="px-5 pb-5 space-y-3">
-                {/* Kamera / Preview — independent */}
-                <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ aspectRatio: '4/3' }}>
-                  {showMidDayCamera && midDayCameraUnavailable ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-6">
-                      <div className="text-center">
-                        <XCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-                        <p className="text-white text-sm mb-2" style={{ fontWeight: 600 }}>Kamera Tidak Tersedia</p>
-                        <p className="text-white/60 text-xs leading-relaxed mb-4">{midDayCameraError}</p>
-                        <div className="flex gap-2">
-                          <button onClick={stopMidDayCamera}
-                            className="flex-1 px-3 py-2 rounded-xl bg-white/10 text-white text-xs" style={{ fontWeight: 600 }}>
-                            Tutup
-                          </button>
-                          <button onClick={() => { stopMidDayCamera(); startMidDayCamera(); }}
-                            className="flex-1 px-3 py-2 rounded-xl bg-blue-500 text-white text-xs" style={{ fontWeight: 600 }}>
-                            Coba Lagi
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : showMidDayCamera ? (
-                    <div className="absolute inset-0">
-                      <video ref={midDayVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 flex items-end justify-center pb-6">
-                        <button onClick={captureMidDayPhoto}
-                          className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
-                          <div className="w-14 h-14 rounded-full border-4 border-blue-500" />
+          ) : (
+            /* ── Form selalu aktif ── */
+            <div className="px-5 pb-5 space-y-3">
+              {/* Kamera / Preview — independent */}
+              <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ aspectRatio: '4/3' }}>
+                {showMidDayCamera && midDayCameraUnavailable ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-6">
+                    <div className="text-center">
+                      <XCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+                      <p className="text-white text-sm mb-2" style={{ fontWeight: 600 }}>Kamera Tidak Tersedia</p>
+                      <p className="text-white/60 text-xs leading-relaxed mb-4">{midDayCameraError}</p>
+                      <div className="flex gap-2">
+                        <button onClick={stopMidDayCamera}
+                          className="flex-1 px-3 py-2 rounded-xl bg-white/10 text-white text-xs" style={{ fontWeight: 600 }}>
+                          Tutup
+                        </button>
+                        <button onClick={() => { stopMidDayCamera(); startMidDayCamera(); }}
+                          className="flex-1 px-3 py-2 rounded-xl bg-blue-500 text-white text-xs" style={{ fontWeight: 600 }}>
+                          Coba Lagi
                         </button>
                       </div>
-                      <button onClick={stopMidDayCamera}
-                        className="absolute top-3 right-3 p-2 rounded-xl bg-black/40 text-white">
-                        <XCircle className="w-5 h-5" />
-                      </button>
-                      {currentLocation && (
-                        <div className="absolute bottom-2 left-2 right-16 px-3 py-1.5 rounded-lg bg-black/50 text-white text-[10px] flex items-center gap-1">
-                          <MapPin className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{currentLocation.address}</span>
-                        </div>
-                      )}
                     </div>
-                  ) : midDayCapturedPreview ? (
-                    <div className="absolute inset-0">
-                      <img src={midDayCapturedPreview} alt="Mid-Day" className="w-full h-full object-cover" />
-                      <div className="absolute top-3 right-3 px-3 py-1 rounded-xl bg-blue-500/90 text-white text-xs" style={{ fontWeight: 600 }}>
-                        Foto siap
-                      </div>
-                      <button onClick={() => { setMidDayCapturedBlob(null); setMidDayCapturedPreview(null); }}
-                        className="absolute top-3 left-3 px-3 py-1 rounded-xl bg-black/40 text-white text-xs">
-                        Ulang
+                  </div>
+                ) : showMidDayCamera ? (
+                  <div className="absolute inset-0">
+                    <video ref={midDayVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 flex items-end justify-center pb-6">
+                      <button onClick={captureMidDayPhoto}
+                        className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+                        <div className="w-14 h-14 rounded-full border-4 border-blue-500" />
                       </button>
                     </div>
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                      <div className="text-center">
-                        <Camera className="w-10 h-10 text-white/20 mx-auto mb-2" />
-                        <p className="text-white/40 text-xs">Foto selfie untuk mid-day check in</p>
+                    <button onClick={stopMidDayCamera}
+                      className="absolute top-3 right-3 p-2 rounded-xl bg-black/40 text-white">
+                      <XCircle className="w-5 h-5" />
+                    </button>
+                    {currentLocation && (
+                      <div className="absolute bottom-2 left-2 right-16 px-3 py-1.5 rounded-lg bg-black/50 text-white text-[10px] flex items-center gap-1">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{currentLocation.address}</span>
                       </div>
+                    )}
+                  </div>
+                ) : midDayCapturedPreview ? (
+                  <div className="absolute inset-0">
+                    <img src={midDayCapturedPreview} alt="Mid-Day" className="w-full h-full object-cover" />
+                    <div className="absolute top-3 right-3 px-3 py-1 rounded-xl bg-blue-500/90 text-white text-xs" style={{ fontWeight: 600 }}>
+                      Foto siap
                     </div>
-                  )}
-                </div>
-
-                {/* Lokasi real-time */}
-                <div className="flex items-start gap-2 text-xs text-gray-500 px-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#800000] shrink-0 mt-0.5" />
-                  <span>{currentLocation?.address || 'Mendeteksi lokasi...'}</span>
-                </div>
-
-                {/* Input kegiatan */}
-                <textarea
-                  value={midDayActivity}
-                  onChange={(e) => setMidDayActivity(e.target.value)}
-                  placeholder="Tuliskan kegiatan yang sedang Anda kerjakan saat ini..."
-                  className="w-full h-24 px-4 py-3 rounded-2xl bg-white/80 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/30 resize-none text-sm"
-                />
-
-                {/* Tombol aksi */}
-                {!showMidDayCamera && !midDayCapturedPreview && (
-                  <button onClick={startMidDayCamera}
-                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white transition-all flex items-center justify-center gap-2"
-                    style={{ fontWeight: 600 }}>
-                    <Camera className="w-5 h-5" /> Buka Kamera
-                  </button>
-                )}
-
-                {midDayCapturedPreview && midDayActivity.trim() && (
-                  <button onClick={handleMidDayCheckIn} disabled={loading}
-                    className={`w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700 text-white transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-60' : ''}`}
-                    style={{ fontWeight: 600 }}>
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                    {loading ? 'Memproses...' : 'Konfirmasi Mid-Day Check In'}
-                  </button>
-                )}
-
-                {midDayCapturedPreview && !midDayActivity.trim() && (
-                  <p className="text-center text-xs text-orange-500">Harap isi kegiatan terlebih dahulu ↑</p>
+                    <button onClick={() => { setMidDayCapturedBlob(null); setMidDayCapturedPreview(null); }}
+                      className="absolute top-3 left-3 px-3 py-1 rounded-xl bg-black/40 text-white text-xs">
+                      Ulang
+                    </button>
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                    <div className="text-center">
+                      <Camera className="w-10 h-10 text-white/20 mx-auto mb-2" />
+                      <p className="text-white/40 text-xs">Foto selfie untuk mid-day check in</p>
+                    </div>
+                  </div>
                 )}
               </div>
-            )}
-          </motion.div>
-        )}
+
+              {/* Lokasi real-time */}
+              <div className="flex items-start gap-2 text-xs text-gray-500 px-1">
+                <MapPin className="w-3.5 h-3.5 text-[#800000] shrink-0 mt-0.5" />
+                <span>{currentLocation?.address || 'Mendeteksi lokasi...'}</span>
+              </div>
+
+              {/* Input kegiatan */}
+              <textarea
+                value={midDayActivity}
+                onChange={(e) => setMidDayActivity(e.target.value)}
+                placeholder="Tuliskan kegiatan yang sedang Anda kerjakan saat ini..."
+                className="w-full h-24 px-4 py-3 rounded-2xl bg-white/80 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/30 resize-none text-sm"
+              />
+
+              {/* Tombol aksi */}
+              {!showMidDayCamera && !midDayCapturedPreview && (
+                <button onClick={startMidDayCamera}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white transition-all flex items-center justify-center gap-2"
+                  style={{ fontWeight: 600 }}>
+                  <Camera className="w-5 h-5" /> Buka Kamera
+                </button>
+              )}
+
+              {midDayCapturedPreview && midDayActivity.trim() && (
+                <button onClick={handleMidDayCheckIn} disabled={loading}
+                  className={`w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700 text-white transition-all flex items-center justify-center gap-2 ${loading ? 'opacity-60' : ''}`}
+                  style={{ fontWeight: 600 }}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                  {loading ? 'Memproses...' : 'Konfirmasi Mid-Day Check In'}
+                </button>
+              )}
+
+              {midDayCapturedPreview && !midDayActivity.trim() && (
+                <p className="text-center text-xs text-orange-500">Harap isi kegiatan terlebih dahulu ↑</p>
+              )}
+            </div>
+          )}
+        </motion.div>
 
         {/* Materi Belajar */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}

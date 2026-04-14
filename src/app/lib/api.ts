@@ -49,22 +49,6 @@ export async function clockIn(name: string, lat: string, lng: string, address: s
   }).then(r => r.json());
 }
 
-export async function midDayCheckIn(name: string, lat: string, lng: string, address: string, activity: string, photo: Blob | null) {
-  const formData = new FormData();
-  formData.append('name', name);
-  formData.append('lat', lat);
-  formData.append('lng', lng);
-  formData.append('address', address);
-  formData.append('activity', activity);
-  if (photo) formData.append('photo', photo, 'midday.jpg');
-
-  return fetch(`${BASE_URL}/attendance/midday`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${publicAnonKey}` },
-    body: formData,
-  }).then(r => r.json());
-}
-
 export async function clockOut(name: string, lat: string, lng: string, address: string, report: string, photo: Blob | null) {
   const formData = new FormData();
   formData.append('name', name);
@@ -75,6 +59,23 @@ export async function clockOut(name: string, lat: string, lng: string, address: 
   if (photo) formData.append('photo', photo, 'clockout.jpg');
 
   return fetch(`${BASE_URL}/attendance/clockout`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${publicAnonKey}` },
+    body: formData,
+  }).then(r => r.json());
+}
+
+// Mid-Day Check In
+export async function midDayCheckIn(name: string, lat: string, lng: string, address: string, activity: string, photo: Blob | null) {
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('lat', lat);
+  formData.append('lng', lng);
+  formData.append('address', address);
+  formData.append('activity', activity); // Menyisipkan data kegiatan
+  if (photo) formData.append('photo', photo, 'midday.jpg');
+
+  return fetch(`${BASE_URL}/attendance/midday`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${publicAnonKey}` },
     body: formData,

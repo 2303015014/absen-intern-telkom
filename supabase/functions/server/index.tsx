@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
@@ -17,7 +18,7 @@ const supabaseAdmin = () => createClient(
   try {
     const sb = supabaseAdmin();
     const { data: buckets } = await sb.storage.listBuckets();
-    const exists = buckets?.some(b => b.name === BUCKET_NAME);
+    const exists = buckets?.some((b: any) => b.name === BUCKET_NAME);
     if (!exists) {
       await sb.storage.createBucket(BUCKET_NAME, { public: false });
       console.log("Bucket created:", BUCKET_NAME);
@@ -38,11 +39,11 @@ app.use("/*", cors({
 
 const BASE = "/make-server-e27a5f03";
 
-app.get(`${BASE}/health`, (c) => c.json({ status: "ok" }));
+app.get(`${BASE}/health`, (c: any) => c.json({ status: "ok" }));
 
 // ============ AUTH / USERS ============
 
-app.post(`${BASE}/auth/login`, async (c) => {
+app.post(`${BASE}/auth/login`, async (c: any) => {
   try {
     const { name, password, role } = await c.req.json();
     if (!name || !password || !role) return c.json({ error: "Nama, password, dan role wajib diisi" }, 400);
@@ -70,7 +71,7 @@ app.post(`${BASE}/auth/login`, async (c) => {
   }
 });
 
-app.get(`${BASE}/interns`, async (c) => {
+app.get(`${BASE}/interns`, async (c: any) => {
   try {
     const list = (await kv.get("userlist:intern")) || [];
     const users = [];
@@ -91,7 +92,7 @@ app.get(`${BASE}/interns`, async (c) => {
 
 // ============ ATTENDANCE ============
 
-app.post(`${BASE}/attendance/clockin`, async (c) => {
+app.post(`${BASE}/attendance/clockin`, async (c: any) => {
   try {
     const formData = await c.req.formData();
     const name = formData.get("name") as string;
@@ -103,8 +104,13 @@ app.post(`${BASE}/attendance/clockin`, async (c) => {
     const today = new Date().toISOString().split("T")[0];
     const timeNow = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Jakarta" });
     const attKey = `attendance:${name.toLowerCase().trim()}:${today}`;
-    const existing = await kv.get(attKey);
+    
+    let existing = await kv.get(attKey);
     if (existing && existing.clockIn) return c.json({ error: "Sudah clock in hari ini" }, 400);
+    if (!existing) {
+      existing = { date: today, status: "clocked-in", approvedBy: null };
+    }
+
     let photoUrl = null;
     if (photo && photo.size > 0) {
       const sb = supabaseAdmin();
@@ -116,7 +122,16 @@ app.post(`${BASE}/attendance/clockin`, async (c) => {
         photoUrl = signedData?.signedUrl;
       }
     }
-    const record = { date: today, clockIn: timeNow, clockOut: null, locationIn: { lat, lng, address: address || "Unknown" }, locationOut: null, photoIn: photoUrl, photoOut: null, report: null, status: "clocked-in", approvedBy: null };
+    
+    const record = { 
+      ...existing, 
+      date: today, 
+      clockIn: timeNow, 
+      locationIn: { lat, lng, address: address || "Unknown" }, 
+      photoIn: photoUrl, 
+      status: existing.status === "approved" ? "approved" : "clocked-in" 
+    };
+    
     await kv.set(attKey, record);
     return c.json({ success: true, attendance: record });
   } catch (e) {
@@ -125,7 +140,7 @@ app.post(`${BASE}/attendance/clockin`, async (c) => {
   }
 });
 
-app.post(`${BASE}/attendance/clockout`, async (c) => {
+app.post(`${BASE}/attendance/clockout`, async (c: any) => {
   try {
     const formData = await c.req.formData();
     const name = formData.get("name") as string;
@@ -159,8 +174,7 @@ app.post(`${BASE}/attendance/clockout`, async (c) => {
   }
 });
 
-// ── Mid-Day Check In ──
-app.post(`${BASE}/attendance/midday`, async (c) => {
+app.post(`${BASE}/attendance/midday`, async (c: any) => {
   try {
     const formData = await c.req.formData();
     const name = formData.get("name") as string;
@@ -169,49 +183,71 @@ app.post(`${BASE}/attendance/midday`, async (c) => {
     const address = formData.get("address") as string;
     const activity = formData.get("activity") as string;
     const photo = formData.get("photo") as File | null;
-
+    
     if (!name) return c.json({ error: "Nama wajib diisi" }, 400);
-    if (!activity) return c.json({ error: "Kegiatan wajib diisi" }, 400);
-
+    
     const today = new Date().toISOString().split("T")[0];
-    const timeNow = new Date().toLocaleTimeString("id-ID", {
-      hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Jakarta",
-    });
+    const timeNow = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Jakarta" });
     const attKey = `attendance:${name.toLowerCase().trim()}:${today}`;
-    const existing = await kv.get(attKey);
-
-    if (!existing || !existing.clockIn) return c.json({ error: "Belum clock in hari ini" }, 400);
-    if (existing.midDayCheckIn) return c.json({ error: "Mid-day check in sudah dilakukan hari ini" }, 400);
+    
+    let existing = await kv.get(attKey);
+    if (!existing) {
+      existing = { 
+        date: today, 
+        clockIn: null, 
+        clockOut: null, 
+        locationIn: null, 
+        locationOut: null, 
+        photoIn: null, 
+        photoOut: null, 
+        report: null, 
+        status: "pending", 
+        approvedBy: null 
+      };
+    }
 
     let photoUrl = null;
     if (photo && photo.size > 0) {
       const sb = supabaseAdmin();
       const filePath = `attendance/${name.toLowerCase().trim()}/${today}_midday_${Date.now()}.jpg`;
-      const { error: uploadError } = await sb.storage.from(BUCKET_NAME).upload(filePath, photo, {
-        contentType: "image/jpeg", upsert: true,
-      });
+      const { error: uploadError } = await sb.storage.from(BUCKET_NAME).upload(filePath, photo, { contentType: "image/jpeg", upsert: true });
       if (!uploadError) {
         const { data: signedData } = await sb.storage.from(BUCKET_NAME).createSignedUrl(filePath, 86400 * 30);
         photoUrl = signedData?.signedUrl;
+      } else {
+        console.log("Mid-Day Photo upload error:", uploadError);
       }
     }
 
-    const record = {
-      ...existing,
-      midDayCheckIn: timeNow,
-      locationMidDay: { lat, lng, address: address || "Unknown" },
-      photoMidDay: photoUrl,
-      midDayActivity: activity,
+    const record = { 
+      ...existing, 
+      midDayCheckIn: timeNow, 
+      locationMidDay: { lat, lng, address: address || "Unknown" }, 
+      photoMidDay: photoUrl, 
+      midDayActivity: activity || null 
     };
+
+    if (record.status !== "approved") {
+      record.status = "pending";
+    }
+
     await kv.set(attKey, record);
+    
+    const listKey = "userlist:intern";
+    const list = (await kv.get(listKey)) || [];
+    if (!list.includes(name.toLowerCase().trim())) {
+      list.push(name.toLowerCase().trim());
+      await kv.set(listKey, list);
+    }
+
     return c.json({ success: true, attendance: record });
   } catch (e) {
-    console.log("Mid-day check in error:", e);
-    return c.json({ error: `Mid-day check in error: ${e}` }, 500);
+    console.log("Mid-Day check in error:", e);
+    return c.json({ error: `Mid-Day check in error: ${e}` }, 500);
   }
 });
 
-app.get(`${BASE}/attendance/:name`, async (c) => {
+app.get(`${BASE}/attendance/:name`, async (c: any) => {
   try {
     const name = c.req.param("name").toLowerCase().trim();
     const records = await kv.getByPrefix(`attendance:${name}:`);
@@ -222,7 +258,7 @@ app.get(`${BASE}/attendance/:name`, async (c) => {
   }
 });
 
-app.post(`${BASE}/attendance/approve`, async (c) => {
+app.post(`${BASE}/attendance/approve`, async (c: any) => {
   try {
     const { internName, date, mentorName } = await c.req.json();
     const attKey = `attendance:${internName.toLowerCase().trim()}:${date}`;
@@ -240,7 +276,7 @@ app.post(`${BASE}/attendance/approve`, async (c) => {
 
 // ============ QUIZ ============
 
-app.get(`${BASE}/quiz/questions`, async (c) => {
+app.get(`${BASE}/quiz/questions`, async (c: any) => {
   try {
     let questions = await kv.get("quiz_questions");
     if (!questions || questions.length === 0) {
@@ -260,7 +296,7 @@ app.get(`${BASE}/quiz/questions`, async (c) => {
   }
 });
 
-app.put(`${BASE}/quiz/questions`, async (c) => {
+app.put(`${BASE}/quiz/questions`, async (c: any) => {
   try {
     const { questions } = await c.req.json();
     await kv.set("quiz_questions", questions);
@@ -271,7 +307,7 @@ app.put(`${BASE}/quiz/questions`, async (c) => {
   }
 });
 
-app.post(`${BASE}/quiz/submit`, async (c) => {
+app.post(`${BASE}/quiz/submit`, async (c: any) => {
   try {
     const { name, score, totalQuestions, answers } = await c.req.json();
     const key = `quiz_result:${name.toLowerCase().trim()}:${Date.now()}`;
@@ -296,7 +332,7 @@ app.post(`${BASE}/quiz/submit`, async (c) => {
   }
 });
 
-app.get(`${BASE}/quiz/results/:name`, async (c) => {
+app.get(`${BASE}/quiz/results/:name`, async (c: any) => {
   try {
     const name = c.req.param("name").toLowerCase().trim();
     const results = await kv.getByPrefix(`quiz_result:${name}:`);
@@ -310,7 +346,7 @@ app.get(`${BASE}/quiz/results/:name`, async (c) => {
 // ============ MATERIALS ============
 
 // Upload material (PDF storage only)
-app.post(`${BASE}/materials/upload`, async (c) => {
+app.post(`${BASE}/materials/upload`, async (c: any) => {
   try {
     const formData = await c.req.formData();
     const title = formData.get("title") as string;
@@ -352,7 +388,7 @@ app.post(`${BASE}/materials/upload`, async (c) => {
   }
 });
 
-app.get(`${BASE}/materials`, async (c) => {
+app.get(`${BASE}/materials`, async (c: any) => {
   try {
     const materials = (await kv.get("materials_list")) || [];
     return c.json({ materials });
@@ -362,7 +398,7 @@ app.get(`${BASE}/materials`, async (c) => {
   }
 });
 
-app.delete(`${BASE}/materials/:id`, async (c) => {
+app.delete(`${BASE}/materials/:id`, async (c: any) => {
   try {
     const id = parseInt(c.req.param("id"));
     const materials = (await kv.get("materials_list")) || [];
