@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   Camera, MapPin, Clock, Calendar, LogOut, Trophy, FileText, 
-  CheckCircle, XCircle, Loader2, BookOpen, Download, Eye, ChevronLeft, ChevronRight, X
+  CheckCircle, XCircle, Loader2, BookOpen, Download, ChevronLeft, ChevronRight, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import telkomLogo from "../../assets/logotelkom.png";
@@ -49,9 +49,8 @@ export default function InternDashboard() {
   const [cameraMode, setCameraMode] = useState<'clockin' | 'clockout'>('clockin');
   const [cameraUnavailable, setCameraUnavailable] = useState(false);
   const [cameraError, setCameraError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [materials, setMaterials] = useState<any[]>([]);
-
   const [activeView, setActiveView] = useState<'home' | 'daily' | 'midday'>('home');
 
   const [midDayActivity, setMidDayActivity] = useState('');
@@ -65,8 +64,6 @@ export default function InternDashboard() {
   const [logbookMonth, setLogbookMonth] = useState(new Date().getMonth());
   const [logbookYear, setLogbookYear] = useState(new Date().getFullYear());
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null);
-  const [pdfLoadError, setPdfLoadError] = useState(false);
 
   const now = new Date();
   const [currentTime, setCurrentTime] = useState(now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
@@ -362,7 +359,6 @@ export default function InternDashboard() {
       <canvas ref={canvasRef} className="hidden" />
       <canvas ref={midDayCanvasRef} className="hidden" />
 
-      {/* Success Toast */}
       <AnimatePresence>
         {showSuccess && (
           <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }}
@@ -373,7 +369,6 @@ export default function InternDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
       <div className="bg-gradient-to-r from-[#800000] to-[#cc0000] text-white px-6 pt-6 pb-8 rounded-b-[32px] shadow-[0_8px_32px_rgba(128,0,0,0.2)]">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-4">
@@ -407,13 +402,9 @@ export default function InternDashboard() {
 
       <div className="max-w-md mx-auto p-5 space-y-5 pb-24">
         
-        {/* ==============================================================
-            VIEW 1: MENU UTAMA (HOME)
-            ============================================================== */}
         {activeView === 'home' && (
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
             
-            {/* Time & Date */}
             <div className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
               <div className="flex items-center justify-between">
                 <div>
@@ -426,7 +417,6 @@ export default function InternDashboard() {
               </div>
             </div>
 
-            {/* Menu Pilihan Absensi */}
             <div className="space-y-3">
               <h3 className="text-gray-900 px-1" style={{ fontWeight: 700 }}>Pilih Menu Absensi</h3>
 
@@ -465,7 +455,6 @@ export default function InternDashboard() {
               </motion.div>
             </div>
 
-            {/* Calendar */}
             <div className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="w-5 h-5 text-[#800000]" />
@@ -530,7 +519,7 @@ export default function InternDashboard() {
               )}
             </div>
 
-            {/* Materi Belajar */}
+            {/* Materi Belajar - Diperbarui (Hanya Tombol External Link) */}
             <div className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-2 mb-4">
                 <BookOpen className="w-5 h-5 text-[#800000]" />
@@ -554,13 +543,14 @@ export default function InternDashboard() {
                         <p className="text-gray-400 text-xs">{m.fileSize}</p>
                       </div>
                       {m.url && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => { setPdfLoadError(false); setPdfViewer({ url: m.url, title: m.title }); }}
-                            className="p-2.5 rounded-xl bg-[#800000]/10 hover:bg-[#800000]/20 transition-all">
-                            <Eye className="w-4 h-4 text-[#800000]" />
-                          </button>
-                        </div>
+                        <a
+                          href={m.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2.5 rounded-xl bg-[#800000]/10 hover:bg-[#800000]/20 transition-all flex items-center justify-center"
+                          title="Buka di Tab Baru">
+                          <ExternalLink className="w-4 h-4 text-[#800000]" />
+                        </a>
                       )}
                     </div>
                   ))}
@@ -568,7 +558,6 @@ export default function InternDashboard() {
               )}
             </div>
 
-            {/* Download Logbook */}
             <div className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-2 mb-4">
                 <Download className="w-5 h-5 text-[#800000]" />
@@ -659,28 +648,18 @@ export default function InternDashboard() {
                         doc.setFont('helvetica', 'normal');
                         doc.setFontSize(7);
 
-                        // --- PEMBERSIH TEKS (ULTIMATE SANITIZER) & STANDARISASI ---
                         let combinedReport = '';
                         if (rec.midDayActivity) combinedReport += `[Siang]\n${rec.midDayActivity}\n`;
                         if (rec.report) combinedReport += `[Sore]\n${rec.report}`;
                         
-                        // 1. Ubah semua jenis enter menjadi newline \n
                         let text = combinedReport.replace(/\r\n|\r/g, '\n');
-                        
-                        // 2. Ganti semua jenis kutip miring/aneh menjadi kutip lurus standar
                         text = text.replace(/[`´‘’ʻ]/g, "'").replace(/[“”«»]/g, '"');
-                        
-                        // 3. SAPU JAGAT: Hapus semua karakter aneh (termasuk fullwidth, emoji, non-breaking space)
-                        // Hanya menyisakan huruf/angka keyboard standar (ASCII 32-126) dan enter
                         text = text.replace(/[^\x20-\x7E\n]/g, ' ');
-                        
-                        // 4. Padatkan spasi ganda yang tersisa menjadi satu spasi saja, dan hapus baris kosong
                         text = text.replace(/ +/g, ' ').replace(/\n\s*\n/g, '\n').trim();
 
                         const rawParagraphs = text.split('\n');
                         const linesToDraw: string[] = [];
 
-                        // 5. Pecah teks menjadi baris-baris standar tanpa indentasi yang rumit
                         rawParagraphs.forEach(paragraph => {
                           const cleanPara = paragraph.trim();
                           if (cleanPara !== '') {
@@ -738,7 +717,6 @@ export default function InternDashboard() {
               </button>
             </div>
 
-            {/* Quiz Widget */}
             <div onClick={() => navigate('/quiz')}
               className="rounded-[24px] p-5 bg-gradient-to-br from-[#800000] to-[#cc0000] text-white shadow-[0_8px_32px_rgba(128,0,0,0.15)] cursor-pointer hover:shadow-[0_12px_48px_rgba(128,0,0,0.25)] transition-all active:scale-[0.98]">
               <div className="flex items-center gap-3 mb-4">
@@ -764,23 +742,18 @@ export default function InternDashboard() {
           </motion.div>
         )}
 
-        {/* ==============================================================
-            VIEW 2: ABSEN HARIAN (CLOCK IN & OUT)
-            ============================================================== */}
         {activeView === 'daily' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
             <button onClick={handleBackToHome} className="flex items-center gap-2 text-sm text-gray-500 mb-2 hover:text-gray-800 transition-colors">
               <ChevronLeft className="w-4 h-4"/> Kembali ke Beranda
             </button>
 
-            {/* Clock In/Out Card */}
             {!isFullyDone ? (
               <div className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
                 <h3 className="text-gray-900 mb-4" style={{ fontWeight: 700 }}>
                   {isClockedIn ? 'Clock Out — Foto & Laporan' : 'Clock In — Foto Absen'}
                 </h3>
 
-                {/* Camera / Preview */}
                 <div className="relative rounded-2xl overflow-hidden mb-4 bg-gray-900 aspect-[4/3]">
                   {showCamera && cameraUnavailable ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-6">
@@ -852,7 +825,6 @@ export default function InternDashboard() {
               </div>
             )}
 
-            {/* Laporan Kegiatan (Jika sudah Clock In tapi belum Clock Out) */}
             {isClockedIn && !isFullyDone && (
               <div className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center gap-2 mb-3">
@@ -875,9 +847,6 @@ export default function InternDashboard() {
           </motion.div>
         )}
 
-        {/* ==============================================================
-            VIEW 3: ABSEN MID DAY WFH
-            ============================================================== */}
         {activeView === 'midday' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
             <button onClick={handleBackToHome} className="flex items-center gap-2 text-sm text-gray-500 mb-2 hover:text-gray-800 transition-colors">
@@ -978,22 +947,6 @@ export default function InternDashboard() {
         )}
 
       </div>
-
-      {/* PDF Modal */}
-      <AnimatePresence>
-        {pdfViewer && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm">
-            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[#800000] to-[#cc0000] text-white">
-              <p className="text-sm font-bold truncate">{pdfViewer.title}</p>
-              <button onClick={() => setPdfViewer(null)} className="p-2 rounded-xl bg-white/20"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="flex-1 relative">
-              <iframe src={`https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(pdfViewer.url)}`} className="w-full h-full border-none" />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
