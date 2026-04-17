@@ -52,10 +52,8 @@ export default function InternDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [materials, setMaterials] = useState<any[]>([]);
 
-  // ── State Navigasi Menu ──
   const [activeView, setActiveView] = useState<'home' | 'daily' | 'midday'>('home');
 
-  // ── Mid-Day Check In ──
   const [midDayActivity, setMidDayActivity] = useState('');
   const [showMidDayCamera, setShowMidDayCamera] = useState(false);
   const [midDayCameraStream, setMidDayCameraStream] = useState<MediaStream | null>(null);
@@ -127,7 +125,6 @@ export default function InternDashboard() {
     return d.getMonth() === month ? d.getDate() : -1;
   }).filter(d => d > 0);
 
-  // Helper untuk menutup semua kamera saat tombol 'Kembali' ditekan
   const handleBackToHome = () => {
     stopCamera();
     stopMidDayCamera();
@@ -176,14 +173,12 @@ export default function InternDashboard() {
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // --- PROSES MIRROR FOTO ---
-        ctx.save(); // Simpan kondisi normal canvas
-        ctx.translate(canvas.width, 0); // Geser titik awal ke kanan
-        ctx.scale(-1, 1); // Balik gambar secara horizontal (Mirror)
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // Gambar fotonya
-        ctx.restore(); // Kembalikan kondisi normal agar teks tulisan tidak ikut terbalik
+        ctx.save();
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
 
-        // --- TAMBAHKAN TEKS WATERMARK ---
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
         ctx.fillStyle = '#fff';
@@ -193,7 +188,6 @@ export default function InternDashboard() {
         if (currentLocation) {
           ctx.fillText(`📍 ${currentLocation.address.substring(0, 50)}`, 10, canvas.height - 28);
         }
-        
         canvas.toBlob((blob) => {
           if (blob) {
             setCapturedBlob(blob);
@@ -218,7 +212,7 @@ export default function InternDashboard() {
       setTodayAttendance(result.attendance);
       setCapturedBlob(null);
       setCapturedPreview(null);
-      setActiveView('home'); // Kembali ke menu utama
+      setActiveView('home'); 
       setSuccessMsg(`Clock In berhasil! Lokasi: ${loc.address.substring(0, 50)}...`);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 4000);
@@ -244,7 +238,7 @@ export default function InternDashboard() {
       setCapturedBlob(null);
       setCapturedPreview(null);
       setDailyReport('');
-      setActiveView('home'); // Kembali ke menu utama
+      setActiveView('home'); 
       setSuccessMsg('Clock Out berhasil! Laporan harian tersimpan.');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 4000);
@@ -296,14 +290,12 @@ export default function InternDashboard() {
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // --- PROSES MIRROR FOTO ---
         ctx.save();
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        ctx.restore(); // Kembalikan normal untuk tulisan
+        ctx.restore();
 
-        // --- TAMBAHKAN TEKS WATERMARK ---
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
         ctx.fillStyle = '#fff';
@@ -313,7 +305,6 @@ export default function InternDashboard() {
         if (currentLocation) {
           ctx.fillText(`📍 ${currentLocation.address.substring(0, 50)}`, 10, canvas.height - 28);
         }
-        
         canvas.toBlob((blob) => {
           if (blob) {
             setMidDayCapturedBlob(blob);
@@ -341,7 +332,7 @@ export default function InternDashboard() {
       setMidDayCapturedBlob(null);
       setMidDayCapturedPreview(null);
       setMidDayActivity('');
-      setActiveView('home'); // Kembali ke menu utama
+      setActiveView('home'); 
       setSuccessMsg('Mid-Day Check In berhasil! Kegiatan tersimpan.');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 4000);
@@ -439,7 +430,6 @@ export default function InternDashboard() {
             <div className="space-y-3">
               <h3 className="text-gray-900 px-1" style={{ fontWeight: 700 }}>Pilih Menu Absensi</h3>
 
-              {/* Menu 1: Clock In & Out */}
               <motion.div whileTap={{ scale: 0.98 }} onClick={() => setActiveView('daily')}
                 className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)] cursor-pointer flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center shrink-0">
@@ -458,7 +448,6 @@ export default function InternDashboard() {
                 )}
               </motion.div>
 
-              {/* Menu 2: Mid Day WFH */}
               <motion.div whileTap={{ scale: 0.98 }} onClick={() => setActiveView('midday')}
                 className="rounded-[24px] p-5 bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)] cursor-pointer flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
@@ -606,7 +595,6 @@ export default function InternDashboard() {
               </div>
               <button
                 onClick={async () => {
-                  // ... logic jsPDF sama dengan sebelumnya ...
                   setGeneratingPdf(true);
                   try {
                     const monthRecords = attendanceHistory.filter(a => {
@@ -616,19 +604,131 @@ export default function InternDashboard() {
 
                     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                     const pageW = doc.internal.pageSize.getWidth();
+                    const margin = 15;
                     let y = 20;
+
+                    // Header
                     doc.setFontSize(16);
+                    doc.setFont('helvetica', 'bold');
                     doc.text('REKAP LOGBOOK MAGANG', pageW / 2, y, { align: 'center' });
+                    y += 7;
+                    doc.setFontSize(11);
+                    doc.text('PT Telkom Indonesia - SDA GSPO', pageW / 2, y, { align: 'center' });
                     y += 10;
+
                     doc.setFontSize(10);
-                    doc.text(`Nama: ${internName}`, 15, y);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Nama: ${internName}`, margin, y);
+                    y += 5;
+                    const monthLabel = new Date(logbookYear, logbookMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                    doc.text(`Periode: ${monthLabel}`, margin, y);
+                    y += 5;
+                    doc.text(`Total Kehadiran: ${monthRecords.length} hari`, margin, y);
                     y += 10;
-                    doc.text('Data berhasil didownload (Fitur lengkap aktif)', 15, y);
-                    doc.save(`Logbook_${internName}_${logbookMonth+1}.pdf`);
+
+                    // Table header
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFillColor(128, 0, 0);
+                    doc.rect(margin, y, pageW - margin * 2, 8, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(8);
+                    doc.text('No', margin + 2, y + 5.5);
+                    doc.text('Tanggal', margin + 10, y + 5.5);
+                    doc.text('In', margin + 35, y + 5.5);
+                    doc.text('Mid', margin + 48, y + 5.5);
+                    doc.text('Out', margin + 61, y + 5.5);
+                    doc.text('Status', margin + 74, y + 5.5);
+                    doc.text('Laporan Kegiatan', margin + 93, y + 5.5);
+                    y += 10;
+                    doc.setTextColor(0, 0, 0);
+
+                    if (monthRecords.length === 0) {
+                      doc.setFont('helvetica', 'italic');
+                      doc.setFontSize(10);
+                      doc.text('Tidak ada data kehadiran pada bulan ini.', pageW / 2, y + 10, { align: 'center' });
+                    } else {
+                      monthRecords.forEach((rec, idx) => {
+                        if (y > 270) {
+                          doc.addPage();
+                          y = 20;
+                        }
+                        const dateStr = new Date(rec.date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                        const bg = idx % 2 === 0 ? 245 : 255;
+                        doc.setFillColor(bg, bg, bg);
+                        
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+
+                        // --- PEMBERSIH TEKS (ULTIMATE SANITIZER) & STANDARISASI ---
+                        let combinedReport = '';
+                        if (rec.midDayActivity) combinedReport += `[Siang]\n${rec.midDayActivity}\n`;
+                        if (rec.report) combinedReport += `[Sore]\n${rec.report}`;
+                        
+                        // 1. Ubah semua jenis enter menjadi newline \n
+                        let text = combinedReport.replace(/\r\n|\r/g, '\n');
+                        
+                        // 2. Ganti semua jenis kutip miring/aneh menjadi kutip lurus standar
+                        text = text.replace(/[`´‘’ʻ]/g, "'").replace(/[“”«»]/g, '"');
+                        
+                        // 3. SAPU JAGAT: Hapus semua karakter aneh (termasuk fullwidth, emoji, non-breaking space)
+                        // Hanya menyisakan huruf/angka keyboard standar (ASCII 32-126) dan enter
+                        text = text.replace(/[^\x20-\x7E\n]/g, ' ');
+                        
+                        // 4. Padatkan spasi ganda yang tersisa menjadi satu spasi saja, dan hapus baris kosong
+                        text = text.replace(/ +/g, ' ').replace(/\n\s*\n/g, '\n').trim();
+
+                        const rawParagraphs = text.split('\n');
+                        const linesToDraw: string[] = [];
+
+                        // 5. Pecah teks menjadi baris-baris standar tanpa indentasi yang rumit
+                        rawParagraphs.forEach(paragraph => {
+                          const cleanPara = paragraph.trim();
+                          if (cleanPara !== '') {
+                            const wrappedText = doc.splitTextToSize(cleanPara, 85);
+                            linesToDraw.push(...wrappedText);
+                          }
+                        });
+
+                        const rowH = Math.max(8, linesToDraw.length * 4 + 4);
+
+                        doc.rect(margin, y, pageW - margin * 2, rowH, 'F');
+                        doc.text(String(idx + 1), margin + 2, y + 5);
+                        doc.text(dateStr, margin + 10, y + 5);
+                        doc.text(rec.clockIn || '-', margin + 35, y + 5);
+                        doc.text(rec.midDayCheckIn || '-', margin + 48, y + 5);
+                        doc.text(rec.clockOut || '-', margin + 61, y + 5);
+                        
+                        const statusText = rec.status === 'approved' ? 'Approved' : rec.status === 'pending' ? 'Pending' : 'Clocked In';
+                        doc.text(statusText, margin + 74, y + 5);
+                        
+                        let currentLineY = y + 5;
+                        linesToDraw.forEach(lineText => {
+                          doc.text(lineText, margin + 93, currentLineY);
+                          currentLineY += 4;
+                        });
+
+                        y += rowH + 1;
+                      });
+                    }
+
+                    // Footer
+                    y += 10;
+                    if (y > 270) { doc.addPage(); y = 20; }
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'italic');
+                    doc.setTextColor(150, 150, 150);
+                    doc.text(`Digenerate pada ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`, margin, y);
+
+                    doc.save(`Logbook_${internName.replace(/\s+/g, '_')}_${monthLabel.replace(/\s+/g, '_')}.pdf`);
                     setSuccessMsg('Logbook berhasil didownload!');
                     setShowSuccess(true);
                     setTimeout(() => setShowSuccess(false), 3000);
-                  } catch(e) { console.log(e); } finally { setGeneratingPdf(false); }
+                  } catch (err) {
+                    console.error('PDF generation error:', err);
+                    alert('Gagal membuat PDF logbook');
+                  } finally {
+                    setGeneratingPdf(false);
+                  }
                 }}
                 disabled={generatingPdf}
                 className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#800000] to-[#cc0000] text-white text-sm flex items-center justify-center gap-2 transition-all hover:shadow-md"
@@ -879,7 +979,7 @@ export default function InternDashboard() {
 
       </div>
 
-      {/* PDF Modal ... (tidak berubah) */}
+      {/* PDF Modal */}
       <AnimatePresence>
         {pdfViewer && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
